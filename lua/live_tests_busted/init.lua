@@ -27,7 +27,7 @@ local run_command = function(bufnr, command)
         for _, failure in ipairs(vim.tbl_deep_extend("force", decoded.errors, decoded.failures)) do
           table.insert(tests, {
             success = false,
-            line = failure.trace.linedefined,
+            line = failure.element.trace.currentline,
             name = failure.name,
             message = failure.message,
           })
