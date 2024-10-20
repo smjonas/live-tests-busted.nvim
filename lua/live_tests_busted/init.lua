@@ -9,8 +9,7 @@ local run_command = function(bufnr, command)
 
   vim.fn.jobstart(command, {
     stderr_buffered = true,
-    -- For some reason, busted / vusted -o json outputs the result on stderr instead of stdout
-    on_stderr = function(_, data)
+    on_stdout = function(_, data)
       local start_line = 1
       -- There might be unrelated stuff printed to the screen, skip that part
       if data then
@@ -27,7 +26,7 @@ local run_command = function(bufnr, command)
         for _, failure in ipairs(vim.tbl_deep_extend("force", decoded.errors, decoded.failures)) do
           table.insert(tests, {
             success = false,
-            line = failure.element.trace.currentline,
+            line = failure.element.trace.currentline - 1,
             name = failure.name,
             message = failure.message,
           })
@@ -39,7 +38,7 @@ local run_command = function(bufnr, command)
       local failed = {}
       for _, test in ipairs(tests) do
         local text = test.success and { "✓", "TestSuccess" } or { "× Test failed", "TestFailure" }
-        vim.api.nvim_buf_set_extmark(bufnr, ns, test.line - 1, 0, {
+        vim.api.nvim_buf_set_extmark(bufnr, ns, test.line, 0, {
           virt_text = { text },
         })
 
@@ -47,7 +46,8 @@ local run_command = function(bufnr, command)
           table.insert(failed, {
             bufnr = bufnr,
             lnum = test.line,
-            col = 0,
+            col = 1,
+            end_col = 3,
             severity = vim.diagnostic.severity.ERROR,
             source = "live-tests",
             message = test.message,
@@ -61,7 +61,7 @@ local run_command = function(bufnr, command)
 end
 
 local add_command = function(command)
-  vim.api.nvim_create_autocmd("BufWritePost", {
+  vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost" }, {
     group = vim.api.nvim_create_augroup("inspired-by-teej", { clear = true }),
     pattern = "*spec.lua",
     callback = function(opts)
